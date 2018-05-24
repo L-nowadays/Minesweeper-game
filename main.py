@@ -126,3 +126,4 @@ while running:
     board.render()
     clock.tick(fps)
     pygame.display.flip()
+
