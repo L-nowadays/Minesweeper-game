@@ -12,6 +12,7 @@ GREEN = (0, 255, 0)
 fps = 60
 # Cell status const
 mine = 10
+flag = 11
 unopened = -1
 # Main loop status
 running = True
@@ -69,12 +70,16 @@ class Board:
                     # Draw mine
                     pygame.draw.rect(screen, RED,
                                      (self.left + x * side + 1, self.top + y * side + 1, side - 2, side - 2))
+                elif self.board[y][x] is flag:
+                    pygame.draw.rect(screen, GREEN,
+                                     (self.left + x * side + 1, self.top + y * side + 1, side - 2, side - 2))
                 elif self.board[y][x] is not unopened:
                     # Draw number of mines around
                     text = font.render(str(self.original_board[y][x]), 1, (255, 255, 255))
                     screen.blit(text, (x * self.cell_size + 2 + self.left, y * self.cell_size + 2 + self.top))
                 pygame.draw.rect(screen, WHITE, (self.left + x * side, self.top + y * side, side, side), 1)
 
+    # Gets position in grid by mouse cords, returns None if cords don't belong to grid
     def get_cell(self, mouse_pos):
         cords = (round((mouse_pos[0] - self.left) // self.cell_size),
                  round((mouse_pos[1] - self.top) // self.cell_size))
@@ -83,14 +88,21 @@ class Board:
         else:
             return None
 
-    def on_click(self, cell_coords):
-        x, y = cell_coords
-        if self.original_board[y][x] is not mine:
+    def open_cell(self, cell_cords):
+        x, y = cell_cords
+        if self.board[y][x] is unopened:
             if self.original_board[y][x] == 0:
                 self.board[y][x] = 0
                 self._open_neighbours(x, y)
             else:
                 self.board[y][x] = self.original_board[y][x]
+
+    def put_flag(self, cell_cords):
+        x, y = cell_cords
+        if self.board[y][x] is unopened:
+            self.board[y][x] = flag
+        elif self.board[y][x] is flag:
+            self.board[y][x] = unopened
 
     def get_click(self, mouse_pos):
         cell = self.get_cell(mouse_pos)
@@ -103,11 +115,14 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            board.get_click(event.pos)
+        if event.type == pygame.MOUSEBUTTONDOWN and board.get_cell(event.pos) is not None:
+            pos = board.get_cell(event.pos)
+            if event.button == 1:
+                board.open_cell(pos)
+            elif event.button == 3:
+                board.put_flag(pos)
 
     screen.fill(BLACK)
     board.render()
     clock.tick(fps)
     pygame.display.flip()
-
