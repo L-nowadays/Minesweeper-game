@@ -1,7 +1,7 @@
 import pygame
 import random
 import os
-from GUI import GUI, Button
+from GUI import GUI, Button, Label
 
 # Const
 size = screen_w, screen_h = 500, 500
@@ -15,9 +15,9 @@ GREY = (185, 185, 185)
 GRID_GREY = (105, 105, 105)
 # Complexity levels
 # a, b means that amount of mines is in [a, b]
-complexity_levels = {'easy': [5, 10], 'medium': [20 - 30], 'hard': [30 - 40], 'impossible': [40 - 50]}
+complexity_levels = {'easy': [5, 10], 'medium': [30, 40], 'hard': [60, 70], 'rip': [80, 90]}
 # a, b, c means that field will be a x b with cell side of c
-field_metrics = {'easy': [10, 9, 50], 'medium': [16, 15, 30], 'hard': [20, 18, 25], 'impossible': [25, 22, 20]}
+field_metrics = {'easy': [10, 9, 50], 'medium': [16, 15, 30], 'hard': [20, 18, 25], 'rip': [25, 22, 20]}
 # Fps
 fps = 60
 # Cell status const
@@ -123,25 +123,25 @@ class Board:
                 self._open_neighbours(x1, y1)
 
     # Draws board and it's objects on screen
-    def render(self):
+    def render(self, surface):
         side = self.cell_size
         for y in range(self.height):
             for x in range(self.width):
                 cell_pos = (self.left + x * side, self.top + y * side)
                 if self.board[y][x] is mine:
                     # Draw mine image
-                    screen.blit(self.mine_image, cell_pos)
+                    surface.blit(self.mine_image, cell_pos)
                 elif self.board[y][x] is flag:
                     # Draw flag image
-                    screen.blit(self.flag_image, cell_pos)
+                    surface.blit(self.flag_image, cell_pos)
                 elif self.board[y][x] is unopened:
-                    screen.blit(self.cell_image, cell_pos)
+                    surface.blit(self.cell_image, cell_pos)
                 elif 0 < self.board[y][x] <= 8:
                     # Draw number of mines around
-                    screen.blit(self.number_images[self.original_board[y][x] - 1], cell_pos)
+                    surface.blit(self.number_images[self.original_board[y][x] - 1], cell_pos)
                 elif self.board[y][x] is lose_mine:
                     # Draw lose mine image
-                    screen.blit(self.lose_mine_image, cell_pos)
+                    surface.blit(self.lose_mine_image, cell_pos)
                 pygame.draw.rect(screen, GRID_GREY, (self.left + x * side, self.top + y * side, side, side), 1)
 
     # Gets position in grid by mouse cords, returns None if cords don't belong to grid
@@ -191,11 +191,10 @@ class Game:
         # Gui
         self.gui = GUI()
         main_menu_elements = [Button((0, 125, 500, 65), 'Play', 75, BLACK, GREY, action=self.play),
-                              Button((0, 190, 500, 65), 'Mines: 10-20', 75, BLACK, GREY),
+                              Button((0, 190, 500, 65), 'Lvl: easy', 75, BLACK, GREY, action=self._switch_complexity),
                               Button((0, 255, 500, 65), 'Exit', 75, BLACK, GREY, action=lambda: 0 / 0)]
+        setattr(main_menu_elements[1], 'index', 0)
         self.gui.add_page('main', main_menu_elements)
-        # Game board
-        self.board = None
         # Complexity
         self.complexity = 'easy'
 
@@ -205,10 +204,10 @@ class Game:
         # Launch game intro
         self.intro()
 
-    # Shows game intro (lasts 3 sec)
+    # Shows game intro (lasts 2 sec)
     def intro(self):
         alpha = 0
-        d_alpha = 1
+        d_alpha = 2
         # Smooth appearance and disappearance of image by changing its alpha
         while True:
             alpha += d_alpha
@@ -227,9 +226,9 @@ class Game:
         if error_message != 'division by zero':
             # print error message in middle of screen and wait 1 sec
             screen.fill(WHITE)
-            rendered_text = font.render(error_message, 20, BLACK)
-            pos = ((screen_w - rendered_text.get_width()) / 2, (screen_h - rendered_text.get_height()) / 2)
-            screen.blit(rendered_text, pos)
+            text = 'Error: ' + error_message
+            label = Label((0, 0, screen_w, screen_h), text, 20, BLACK, None)
+            label.render(screen)
             pygame.display.flip()
             pygame.time.wait(3000)
         pygame.quit()
@@ -246,26 +245,21 @@ class Game:
         # Raise zero division error that will be caught and game will be turned off
         if event.type == pygame.QUIT:
             0 / 0
-        if not self.gui.is_active():
-            self.board.get_event(event)
-        else:
-            self.gui.get_event(event)
+        self.gui.get_event(event)
 
     # Draws game on screen
     def render(self):
         screen.fill(GREY)
-        if self.gui.is_active():
+        if self.gui.active_page == 'main':
             screen.blit(background_image, (0, 0))
-        else:
-            self.board.render()
         self.gui.render(screen)
         pygame.display.flip()
 
     # Creates game session
     def play(self):
-        self.gui.close()
         width, height, cell_size = field_metrics[self.complexity]
-        self.board = Board(width, height, 0, 50, cell_size, self.complexity)
+        self.gui.add_page('board', [Board(width, height, 0, 50, cell_size, self.complexity)])
+        self.gui.open_page('board')
 
     # Lose
     def lose(self):
@@ -276,6 +270,16 @@ class Game:
         # wait 2 sec and go main menu
         pygame.time.wait(2000)
         self.open_menu()
+        # Clear other events to prevent
+        pygame.event.clear()
+
+    # Switches game complexity
+    def _switch_complexity(self):
+        self.gui.pages['main'][1].index = (self.gui.pages['main'][1].index + 1) % 4
+        index = self.gui.pages['main'][1].index
+        self.complexity = ['easy', 'medium', 'hard', 'rip'][index]
+        text = self.gui.pages['main'][1].text.split()[0] + ' ' + self.complexity
+        self.gui.pages['main'][1].change_text(text)
 
 
 game = Game()
@@ -287,5 +291,5 @@ while running:
             game.get_event(event)
         game.render()
         clock.tick(fps)
-    except ZeroDivisionError as error:
+    except Exception as error:
         game.shutdown(str(error))
