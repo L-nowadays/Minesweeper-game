@@ -55,8 +55,8 @@ class Label:
                 for i in range(len(self.text)):
                     text += self.text[i]
                     x_size, y_size = self.font.size(text)
-                    if x_size > self.rect.width - 10:
-                        rendered_text = self.font.render(text, 1, self.font_color)
+                    if x_size > self.rect.width - 5 or text == self.text:
+                        rendered_text = self.font.render(text, 10, self.font_color)
                         x = self.rect.centerx - x_size / 2
                         y = self.rect.centery - y_size / 2
                         self.rendered_text.append([x, y, rendered_text])
@@ -174,3 +174,39 @@ class Button(Label):
             self.light = self.rect.collidepoint(event.pos)
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.light:
             self.action()
+
+
+class Clock(Label):
+    def __init__(self, rect, font_size, text_color, background_color, tick_event_id):
+        super().__init__(rect, '00:00', font_size, text_color, background_color, multilines=False)
+        self.minutes = 0
+        self.seconds = 0
+        self.tick_event_id = tick_event_id
+        self.font = pygame.font.SysFont('Monospace', font_size, bold=True)
+        self.change_text(self.text)
+        pygame.time.set_timer(tick_event_id, 1000)
+
+    # Increases time
+    def tick(self):
+        if self.seconds + 1 == 60:
+            self.minutes += 1
+            self.seconds = 0
+        else:
+            self.seconds += 1
+        # Update time
+        self.change_text(self.format_time())
+
+    # Returns formated time
+    def format_time(self):
+        mins = str(self.minutes)
+        secs = str(self.seconds)
+        return '{}:{}'.format(mins.zfill(2), secs.zfill(2))
+
+    # Reacts only on special tick event
+    def get_event(self, event):
+        if event.type == self.tick_event_id:
+            self.tick()
+
+    # Stops clock
+    def stop(self):
+        pygame.time.set_timer(self.tick_event_id, 0)

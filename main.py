@@ -1,7 +1,7 @@
 import pygame
 import random
 import os
-from GUI import GUI, Button, Label
+from GUI import GUI, Button, Label, Clock
 
 # Const
 size = screen_w, screen_h = 500, 500
@@ -27,6 +27,8 @@ lose_mine = 100
 unopened = -1
 # Main loop status
 running = True
+# Event that makes clock tick
+tick_event_id = 2
 
 # Setup
 pygame.init()
@@ -265,7 +267,9 @@ class Game:
     # Creates game session
     def play(self):
         width, height, cell_size = field_metrics[self.complexity]
-        self.gui.add_page('board', [Board(width, height, 0, 50, cell_size, self.complexity)])
+        game_elements = [Board(width, height, 0, 50, cell_size, self.complexity),
+                         Clock((50, 5, 105, 35), 33, RED, BLACK, tick_event_id)]
+        self.gui.add_page('board', game_elements)
         self.gui.open_page('board')
 
     # Lose
@@ -298,5 +302,5 @@ while running:
             game.get_event(event)
         game.render()
         clock.tick(fps)
-    except Exception as error:
+    except ZeroDivisionError as error:
         game.shutdown(str(error))
