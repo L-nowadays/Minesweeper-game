@@ -162,8 +162,15 @@ class Board:
                 self._open_neighbours(x, y)
             elif self.original_board[y][x] is not mine:
                 self.board[y][x] = self.original_board[y][x]
-            elif self.original_board[y][x] is mine:
+            else:
+                # Show all mines
+                for x1 in range(self.width):
+                    for y1 in range(self.height):
+                        if self.original_board[y1][x1] is mine:
+                            self.board[y1][x1] = mine
+                # Mark mine that cause lose
                 self.board[y][x] = lose_mine
+                # Tell game its lose
                 game.lose()
 
     # Puts flag on self.board
@@ -190,9 +197,9 @@ class Game:
         # Definition of game variables
         # Gui
         self.gui = GUI()
-        main_menu_elements = [Button((0, 125, 500, 65), 'Play', 75, BLACK, GREY, action=self.play),
-                              Button((0, 190, 500, 65), 'Lvl: easy', 75, BLACK, GREY, action=self._switch_complexity),
-                              Button((0, 255, 500, 65), 'Exit', 75, BLACK, GREY, action=lambda: 0 / 0)]
+        main_menu_elements = [Button((200, 125, 100, 60), 'Play', 75, BLACK, GREY, action=self.play),
+                              Button((100, 190, 300, 60), 'Lvl: easy', 75, BLACK, GREY, action=self._switch_complexity),
+                              Button((200, 255, 100, 60), 'Exit', 75, BLACK, GREY, action=lambda: 0 / 0)]
         setattr(main_menu_elements[1], 'index', 0)
         self.gui.add_page('main', main_menu_elements)
         # Complexity
