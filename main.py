@@ -1,7 +1,7 @@
 import pygame
 import random
 import os
-from GUI import GUI, Button, Label, Clock
+from GUI import GUI, Button, Label
 
 # Const
 size = screen_w, screen_h = 500, 500
@@ -15,7 +15,7 @@ GREY = (185, 185, 185)
 GRID_GREY = (105, 105, 105)
 # Complexity levels
 # a, b means that amount of mines is in [a, b]
-complexity_levels = {'easy': [5, 10], 'medium': [30, 40], 'hard': [60, 70], 'rip': [80, 90]}
+complexity_levels = {'easy': [5, 10], 'medium': [20, 25], 'hard': [30, 35], 'rip': [45, 50]}
 # a, b, c means that field will be a x b with cell side of c
 field_metrics = {'easy': [10, 9, 50], 'medium': [16, 15, 30], 'hard': [20, 18, 25], 'rip': [25, 22, 20]}
 # Fps
@@ -65,6 +65,64 @@ lose_mine_image = load_image('lose_mine.png')
 number_images = [load_image('{}.png'.format(i)) for i in range(1, 9)]
 
 
+# Simple clock
+class Clock(Label):
+    def __init__(self, rect, font_size, text_color, background_color, tick_event_id):
+        super().__init__(rect, '00:00', font_size, text_color, background_color, multilines=False)
+        self.minutes = 0
+        self.seconds = 0
+        self.tick_event_id = tick_event_id
+        self.font = pygame.font.SysFont('Monospace', font_size, bold=True)
+        self.change_text(self.text)
+        pygame.time.set_timer(tick_event_id, 1000)
+
+    # Increases time
+    def tick(self):
+        if self.seconds + 1 == 60:
+            self.minutes += 1
+            self.seconds = 0
+        else:
+            self.seconds += 1
+        # Update time
+        self.change_text(self.format_time())
+        if self.minutes == 60:
+            game.lose()
+
+    # Returns formated time
+    def format_time(self):
+        mins = str(self.minutes)
+        secs = str(self.seconds)
+        return '{}:{}'.format(mins.zfill(2), secs.zfill(2))
+
+    # Reacts only on special tick event
+    def get_event(self, event):
+        if event.type == self.tick_event_id:
+            self.tick()
+
+    # Stops clock
+    def stop(self):
+        pygame.time.set_timer(self.tick_event_id, 0)
+
+
+# Counts mines(depends only on amount of flags)
+class Mines_Counter(Label):
+    def __init__(self, rect, font_size, text_color, background_color):
+        mines_count = str(game.gui.pages['board'][0].mines_count)
+        super().__init__(rect, 'Mines: {}'.format(mines_count.zfill(2)), font_size, text_color, background_color,
+                         multilines=False)
+        self.font = pygame.font.SysFont('Monospace', font_size, bold=True)
+        self.change_text(self.text)
+
+    def format_text(self):
+        field = game.gui.pages['board'][0]
+        number = field.mines_count - field.flags_count
+        return str(number).zfill(2)
+
+    def update_text(self):
+        text = 'Mines: {}'.format(self.format_text())
+        self.change_text(text)
+
+
 # Describes player board
 class Board:
     # Creates board width x height with start point in (left, top) and quadratic cells
@@ -89,6 +147,8 @@ class Board:
         # Create full opened board(board with all mines and numbers of mines)
         self.original_board = [[0 for i in range(width)] for i in range(height)]
         self.mines_count = random.randrange(*complexity_levels[complexity])
+        self.flags_on_mines_count = 0
+        self.flags_count = 0
         # Randomly placing mines
         goal = self.mines_count
         while goal > 0:
@@ -180,8 +240,19 @@ class Board:
         x, y = cell_cords
         if self.board[y][x] is unopened:
             self.board[y][x] = flag
+            self.flags_count += 1
+            game.gui.pages['board'][2].update_text()
+            if self.original_board[y][x] is mine:
+                self.flags_on_mines_count += 1
+                if self.flags_on_mines_count == self.mines_count:
+                    game.win()
+
         elif self.board[y][x] is flag:
             self.board[y][x] = unopened
+            self.flags_count -= 1
+            if self.original_board[y][x] is mine:
+                self.flags_on_mines_count -= 1
+            game.gui.pages['board'][2].update_text()
 
     # Makes board react on events
     def get_event(self, event):
@@ -267,9 +338,11 @@ class Game:
     # Creates game session
     def play(self):
         width, height, cell_size = field_metrics[self.complexity]
-        game_elements = [Board(width, height, 0, 50, cell_size, self.complexity),
-                         Clock((50, 5, 105, 35), 33, RED, BLACK, tick_event_id)]
-        self.gui.add_page('board', game_elements)
+        self.gui.add_page('board', [Board(width, height, 0, 50, cell_size, self.complexity)])
+        game_clock = Clock((50, 5, 105, 35), 33, RED, BLACK, tick_event_id)
+        mines_counter = Mines_Counter((250, 5, 200, 35), 33, RED, BLACK)
+        self.gui.add_element('board', game_clock)
+        self.gui.add_element('board', mines_counter)
         self.gui.open_page('board')
 
     # Lose
@@ -280,6 +353,21 @@ class Game:
         pass
         # wait 2 sec and go main menu
         pygame.time.wait(2000)
+        self.open_menu()
+        # Clear other events to prevent
+        pygame.event.clear()
+
+    # Win
+    def win(self):
+        # Stop clock
+        self.gui.pages['board'][1].stop()
+        # Play sound
+        pass
+        # Render game(to see last flag)
+        self.render()
+        # Wait 1 sec
+        pygame.time.wait(1000)
+        # Go main menu
         self.open_menu()
         # Clear other events to prevent
         pygame.event.clear()

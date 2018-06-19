@@ -176,37 +176,4 @@ class Button(Label):
             self.action()
 
 
-class Clock(Label):
-    def __init__(self, rect, font_size, text_color, background_color, tick_event_id):
-        super().__init__(rect, '00:00', font_size, text_color, background_color, multilines=False)
-        self.minutes = 0
-        self.seconds = 0
-        self.tick_event_id = tick_event_id
-        self.font = pygame.font.SysFont('Monospace', font_size, bold=True)
-        self.change_text(self.text)
-        pygame.time.set_timer(tick_event_id, 1000)
 
-    # Increases time
-    def tick(self):
-        if self.seconds + 1 == 60:
-            self.minutes += 1
-            self.seconds = 0
-        else:
-            self.seconds += 1
-        # Update time
-        self.change_text(self.format_time())
-
-    # Returns formated time
-    def format_time(self):
-        mins = str(self.minutes)
-        secs = str(self.seconds)
-        return '{}:{}'.format(mins.zfill(2), secs.zfill(2))
-
-    # Reacts only on special tick event
-    def get_event(self, event):
-        if event.type == self.tick_event_id:
-            self.tick()
-
-    # Stops clock
-    def stop(self):
-        pygame.time.set_timer(self.tick_event_id, 0)
